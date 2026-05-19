@@ -512,7 +512,7 @@
     let f = tasks;
     if (activeTab === 'dashboard') f = tasks.filter(t => t.progress < 100 && t.category !== 'wordpress');
     else if (activeTab === 'completed') f = tasks.filter(t => t.progress === 100 && t.category !== 'wordpress');
-    else f = tasks.filter(t => t.category === activeTab && t.progress < 100);
+    else if (activeTab === 'wordpress') f = tasks.filter(t => t.category === 'wordpress'); else f = tasks.filter(t => t.category === activeTab && t.progress < 100);
     return f.sort((a, b) => {
       const ra = urgencyRank(a), rb = urgencyRank(b);
       return ra !== rb ? ra - rb : new Date(a.endDate) - new Date(b.endDate);
