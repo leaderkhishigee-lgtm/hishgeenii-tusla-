@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Хишгээгийн туслах</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0d0f14">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Хишгээ">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0f14;
+      --surface: #13161e;
+      --surface2: #1a1e2a;
+      --surface3: #21263a;
+      --border: rgba(255,255,255,0.07);
+      --border-active: rgba(99,179,237,0.4);
+      --text: #e8eaf0;
+      --text-muted: #6b7280;
+      --text-dim: #9ca3af;
+      --accent: #60a5fa;
+      --accent-glow: rgba(96,165,250,0.15);
+      --accent-dark: #1d4ed8;
+      --green: #34d399;
+      --orange: #fb923c;
+      --red: #f87171;
+      --yellow: #fbbf24;
+      --sidebar-w: 240px;
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Sora', sans-serif; }
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 99px; }
+
+    #app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ===== SIDEBAR ===== */
+    #sidebar {
+      width: var(--sidebar-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      flex-shrink: 0; z-index: 10;
+    }
+    .sidebar-logo { padding: 24px 20px 18px; border-bottom: 1px solid var(--border); }
+    .sidebar-logo h1 {
+      font-size: 15px; font-weight: 700; color: var(--text);
+      display: flex; align-items: center; gap: 9px; letter-spacing: -0.3px;
+    }
+    .sidebar-logo h1 svg { color: var(--accent); flex-shrink: 0; }
+    .sidebar-logo .date-badge {
+      margin-top: 6px; font-size: 11px; color: var(--text-muted);
+      font-family: 'Space Mono', monospace; letter-spacing: 0.5px;
+    }
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: 10px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      width: 100%; padding: 9px 10px; border-radius: var(--radius-sm);
+      background: transparent; border: none; cursor: pointer;
+      color: var(--text-dim); font-size: 13px; font-family: 'Sora', sans-serif;
+      font-weight: 500; text-align: left; transition: all 0.15s ease;
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: var(--accent-glow); color: var(--accent); border: 1px solid var(--border-active); }
+    .nav-item .nav-icon { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.7; }
+    .nav-item.active .nav-icon { opacity: 1; }
+    .nav-item .lock-icon { margin-left: auto; width: 12px; height: 12px; opacity: 0.4; }
+    .nav-badge {
+      margin-left: auto; background: var(--surface3); color: var(--text-muted);
+      font-size: 10px; font-weight: 700; font-family: 'Space Mono', monospace;
+      padding: 1px 6px; border-radius: 99px;
+    }
+    .nav-item.active .nav-badge { background: var(--accent-dark); color: #fff; }
+
+    /* SIDEBAR BOTTOM */
+    .sidebar-bottom { padding: 14px 16px; border-top: 1px solid var(--border); }
+    .save-status { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--text-muted); font-family: 'Space Mono', monospace; }
+    .save-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); flex-shrink: 0; transition: background 0.3s; }
+    .save-dot.saving { background: var(--yellow); animation: pulse 0.8s infinite; }
+    .save-dot.error  { background: var(--red); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* ===== MAIN ===== */
+    #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .topbar {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0 28px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .topbar-title { font-size: 15px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 8px; }
+    .topbar-title .sub { color: var(--text-muted); font-weight: 400; font-size: 13px; }
+    .btn-primary {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--accent); color: #fff; border: none;
+      border-radius: var(--radius-sm); padding: 8px 16px;
+      font-size: 13px; font-weight: 600; font-family: 'Sora', sans-serif;
+      cursor: pointer; transition: all 0.15s;
+      box-shadow: 0 0 20px rgba(96,165,250,0.2);
+    }
+    .btn-primary:hover { background: #3b82f6; box-shadow: 0 0 28px rgba(96,165,250,0.35); transform: translateY(-1px); }
+    .btn-primary svg { width: 16px; height: 16px; }
+
+    #content { flex: 1; overflow-y: auto; padding: 24px 28px; }
+    .task-grid { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+
+    /* LOADING */
+    .loading-screen {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100%; gap: 14px; color: var(--text-muted);
+    }
+    .spinner {
+      width: 32px; height: 32px; border: 2px solid var(--surface3);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* EMPTY STATE */
+    .empty-state {
+      text-align: center; padding: 80px 20px;
+      border: 1px dashed var(--border); border-radius: var(--radius); background: var(--surface);
+    }
+    .empty-state svg { width: 48px; height: 48px; color: var(--surface3); margin: 0 auto 12px; display: block; }
+    .empty-state h3 { font-size: 15px; font-weight: 600; color: var(--text-dim); margin-bottom: 4px; }
+    .empty-state p { font-size: 13px; color: var(--text-muted); }
+
+    /* TASK CARD */
+    .task-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-left: 3px solid transparent; border-radius: var(--radius);
+      padding: 18px 20px; position: relative;
+      transition: all 0.2s ease; animation: slideIn 0.25s ease both;
+    }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .task-card:hover { background: var(--surface2); border-color: rgba(255,255,255,0.1); box-shadow: 0 4px 24px rgba(0,0,0,0.3); }
+    .task-card.urgent { border-left-color: var(--red); }
+    .task-card.soon   { border-left-color: var(--orange); }
+    .task-card.normal { border-left-color: var(--green); }
+    .task-card.done   { border-left-color: var(--text-muted); opacity: 0.5; }
+    .task-body { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+    .task-meta { display: flex; gap: 6px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
+    .badge { font-size: 10.5px; font-weight: 700; letter-spacing: 0.4px; padding: 3px 9px; border-radius: 99px; font-family: 'Space Mono', monospace; }
+    .badge.urgent { background: rgba(248,113,113,0.12); color: var(--red); }
+    .badge.soon   { background: rgba(251,146,60,0.12);  color: var(--orange); }
+    .badge.normal { background: rgba(52,211,153,0.12);  color: var(--green); }
+    .badge.done   { background: rgba(107,114,128,0.12); color: var(--text-muted); }
+    .badge.cat    { background: var(--surface3); color: var(--text-dim); }
+    .task-title { font-size: 14.5px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+    .task-desc  { font-size: 12.5px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.5; white-space: pre-wrap; }
+    .task-dates { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--text-muted); }
+    .task-dates span { display: flex; align-items: center; gap: 5px; }
+    .task-dates svg { width: 13px; height: 13px; flex-shrink: 0; }
+    .task-card.urgent .task-dates .end { color: var(--red); }
+    .task-card.soon   .task-dates .end { color: var(--orange); }
+    .task-progress-area { flex-shrink: 0; width: 180px; display: flex; flex-direction: column; justify-content: center; }
+    .progress-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
+    .progress-label span:first-child { color: var(--text-muted); }
+    .progress-label span:last-child  { color: var(--accent); font-weight: 700; font-family: 'Space Mono', monospace; }
+    .progress-track { height: 5px; background: var(--surface3); border-radius: 99px; overflow: hidden; margin-bottom: 8px; }
+    .progress-fill  { height: 100%; border-radius: 99px; background: var(--accent); transition: width 0.3s ease; }
+    .task-card.done .progress-fill { background: var(--green); }
+    input[type=range] { width: 100%; height: 4px; appearance: none; background: var(--surface3); border-radius: 99px; outline: none; cursor: pointer; }
+    input[type=range]::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 6px rgba(96,165,250,0.5); cursor: pointer; transition: transform 0.1s; }
+    input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+    .task-actions { position: absolute; top: 14px; right: 14px; display: flex; gap: 6px; opacity: 0; transition: opacity 0.15s; }
+    .task-card:hover .task-actions { opacity: 1; }
+    .icon-btn { width: 30px; height: 30px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--surface2); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all 0.15s; }
+    .icon-btn:hover.edit { background: var(--accent-glow); color: var(--accent); border-color: var(--border-active); }
+    .icon-btn:hover.del  { background: rgba(248,113,113,0.1); color: var(--red); border-color: rgba(248,113,113,0.3); }
+    .icon-btn svg { width: 14px; height: 14px; }
+
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;
+      z-index: 100; padding: 20px; animation: fadeIn 0.15s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; width: 100%; max-width: 460px; overflow: hidden;
+      animation: popIn 0.2s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes popIn { from { transform: scale(0.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-header { padding: 20px 22px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-header h3 { font-size: 15px; font-weight: 700; color: var(--text); }
+    .modal-close { background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; border-radius: 6px; transition: all 0.1s; }
+    .modal-close:hover { background: var(--surface3); color: var(--text); }
+    .modal-close svg { width: 18px; height: 18px; display: block; }
+    .modal-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+    label.field-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 5px; letter-spacing: 0.3px; }
+    .field-input, .field-select, .field-textarea {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 12px;
+      font-size: 13px; font-family: 'Sora', sans-serif; color: var(--text);
+      outline: none; transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field-input:focus, .field-select:focus, .field-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(96,165,250,0.12); }
+    .field-textarea { resize: vertical; min-height: 72px; }
+    .field-select { appearance: none; cursor: pointer; }
+    .field-select option { background: var(--surface2); }
+    .date-row { display: flex; gap: 12px; }
+    .date-row > div { flex: 1; }
+    .progress-input-row { display: flex; flex-direction: column; gap: 6px; }
+    .progress-row-label { display: flex; justify-content: space-between; }
+    .progress-row-label span:last-child { font-family: 'Space Mono', monospace; color: var(--accent); font-weight: 700; font-size: 12px; }
+    .modal-footer { padding: 14px 22px 20px; display: flex; gap: 10px; }
+    .btn-cancel { flex: 1; padding: 10px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: transparent; color: var(--text-dim); font-size: 13px; font-weight: 600; font-family: 'Sora', sans-serif; cursor: pointer; transition: all 0.15s; }
+    .btn-cancel:hover { background: var(--surface2); color: var(--text); }
+    .btn-save { flex: 1; padding: 10px; border-radius: var(--radius-sm); border: none; background: var(--accent); color: #fff; font-size: 13px; font-weight: 700; font-family: 'Sora', sans-serif; cursor: pointer; transition: all 0.15s; }
+    .btn-save:hover { background: #3b82f6; }
+
+    /* PIN */
+    .pin-input { width: 100%; text-align: center; font-size: 22px; letter-spacing: 8px; font-family: 'Space Mono', monospace; font-weight: 700; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; color: var(--text); outline: none; transition: all 0.15s; }
+    .pin-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(96,165,250,0.12); }
+    .pin-input.error { border-color: var(--red); box-shadow: 0 0 0 3px rgba(248,113,113,0.12); }
+    .pin-error-msg { text-align: center; font-size: 12px; color: var(--red); margin-top: 4px; }
+
+    /* TOAST */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 16px; font-size: 13px; color: var(--text); z-index: 200; display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.4); animation: toastIn 0.25s ease; }
+    @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .toast.success { border-color: rgba(52,211,153,0.3); }
+    .toast.success::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+    .toast.err { border-color: rgba(248,113,113,0.3); }
+    .toast.err::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--red); flex-shrink: 0; }
+
+    /* MOBILE */
+    @media (max-width: 700px) {
+      #sidebar { display: none; }
+      .topbar { padding: 0 16px; }
+      #content { padding: 16px; }
+      .task-body { flex-direction: column; }
+      .task-progress-area { width: 100%; }
+      .task-actions { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <div class="sidebar-logo">
+      <h1>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+        Хишгээгийн туслах
+      </h1>
+      <div class="date-badge" id="today-label"></div>
+    </div>
+    <nav class="sidebar-nav" id="nav-list"></nav>
+    <div class="sidebar-bottom">
+      <div class="save-status">
+        <span class="save-dot" id="save-dot"></span>
+        <span id="save-label">Холбогдож байна...</span>
+      </div>
+    </div>
+  </aside>
+
+  <div id="main">
+    <header class="topbar">
+      <div class="topbar-title" id="topbar-title">—</div>
+      <button class="btn-primary" onclick="openNewModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        Шинэ ажил
+      </button>
+    </header>
+    <main id="content">
+      <div class="task-grid" id="task-grid">
+        <div class="loading-screen"><div class="spinner"></div><span>Уншиж байна...</span></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- TASK MODAL -->
+<div class="modal-overlay" id="task-modal" style="display:none" onclick="onOverlayClick(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="modal-title">Шинэ ажил үүсгэх</h3>
+      <button class="modal-close" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div><label class="field-label">Ажлын нэр</label><input class="field-input" id="f-title" type="text" placeholder="Жишээ: Тайлан бичих..."></div>
+      <div><label class="field-label">Дэлгэрэнгүй</label><textarea class="field-textarea" id="f-desc" placeholder="Ажлын тухай дэлгэрэнгүй..."></textarea></div>
+      <div><label class="field-label">Ангилал</label><select class="field-select" id="f-category"></select></div>
+      <div class="date-row">
+        <div><label class="field-label">Эхлэх</label><input class="field-input" id="f-start" type="date"></div>
+        <div><label class="field-label">Дуусах</label><input class="field-input" id="f-end" type="date"></div>
+      </div>
+      <div class="progress-input-row">
+        <div class="progress-row-label"><label class="field-label" style="margin:0">Явц</label><span id="f-prog-label">0%</span></div>
+        <input type="range" min="0" max="100" step="10" id="f-progress" value="0" oninput="document.getElementById('f-prog-label').textContent=this.value+'%'">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Цуцлах</button>
+      <button class="btn-save" onclick="handleSave()">Хадгалах</button>
+    </div>
+  </div>
+</div>
+
+<!-- PIN MODAL -->
+<div class="modal-overlay" id="pin-modal" style="display:none" onclick="closePinModal()">
+  <div class="modal" style="max-width:340px" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 style="display:flex;align-items:center;gap:8px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent)"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        WORDPRESS
+      </h3>
+      <button class="modal-close" onclick="closePinModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <label class="field-label" style="text-align:center;display:block">Нууц үгээ оруулна уу</label>
+        <input class="pin-input" id="pin-input" type="password" maxlength="10" placeholder="····" onkeydown="if(event.key==='Enter')checkPin()">
+        <div class="pin-error-msg" id="pin-error" style="display:none">Нууц үг буруу байна!</div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn-save" onclick="checkPin()" style="flex:1">Нэвтрэх</button></div>
+  </div>
+</div>
+
+<script>
+  // ===== SUPABASE CONFIG =====
+  const SUPABASE_URL = 'https://prmudepvtbtmxyfddsty.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_aZObq05-3g0Jsz6F4-3p1A_-4BRCLI1';
+  const API = `${SUPABASE_URL}/rest/v1/tasks`;
+  const HEADERS = {
+    'Content-Type': 'application/json',
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Prefer': 'return=representation',
+  };
+
+  // ===== CATEGORIES =====
+  const CATEGORIES = [
+    { id: 'dashboard', name: 'Нүүр хуудас', icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>` },
+    { id: 'ubxd',      name: 'UBXD',         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>` },
+    { id: 'website',   name: 'Вэб сайт',     icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>` },
+    { id: 'teacher',   name: 'Багш',         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>` },
+    { id: 'training',  name: 'Сургалт',      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>` },
+    { id: 'hustle',    name: 'Халтуур',      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><line x1="6" x2="6" y1="2" y2="4"/><line x1="10" x2="10" y1="2" y2="4"/><line x1="14" x2="14" y1="2" y2="4"/></svg>` },
+    { id: 'personal',  name: 'Хувийн',       icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>` },
+    { id: 'completed', name: 'Дууссан',      icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>` },
+    { id: 'wordpress', name: 'WORDPRESS',    icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>`, locked: true },
+  ];
+
+  const INITIAL_TASKS = [
+    { id: Date.now()+1, title: 'UBXD төслийн тайлан илгээх', description: 'Тайланд сүүлийн сарын борлуулалтын дүнг оруулах шаардлагатай.', category: 'ubxd', startDate: '2026-04-25', endDate: '2026-04-28', progress: 80 },
+    { id: Date.now()+2, title: 'Вэб сайтын нүүр хуудас шинэчлэх', description: 'Зураг болон текстийг шинэчилж оруулах.', category: 'website', startDate: '2026-04-20', endDate: '2026-04-30', progress: 50 },
+    { id: Date.now()+3, title: 'Оюутнуудын шалгалтын материал засах', description: '', category: 'teacher', startDate: '2026-04-27', endDate: '2026-05-05', progress: 10 },
+    { id: Date.now()+4, title: 'Шинэ логоны загвар гаргах', description: '', category: 'hustle', startDate: '2026-04-26', endDate: '2026-04-27', progress: 90 },
+    { id: Date.now()+5, title: 'Шүдний эмчид үзүүлэх', description: '', category: 'personal', startDate: '2026-05-02', endDate: '2026-05-02', progress: 0 },
+    { id: Date.now()+6, title: 'Түрээсийн мөнгө төлөх', description: '', category: 'wordpress', startDate: '2026-04-25', endDate: '2026-04-28', progress: 0 },
+  ];
+
+  // ===== STATE =====
+  let tasks = [];
+  let activeTab = 'dashboard';
+  let editingId = null;
+  let isWordpressUnlocked = false;
+  let pendingTab = '';
+  const TODAY = new Date().toISOString().split('T')[0];
+
+  // ===== SUPABASE API =====
+  // Supabase tasks table: id(bigint), title, description, category, start_date, end_date, progress
+  // App uses camelCase internally, DB uses snake_case
+
+  function toDb(t) {
+    return {
+      id: t.id,
+      title: t.title,
+      description: t.description || '',
+      category: t.category,
+      start_date: t.startDate,
+      end_date: t.endDate,
+      progress: t.progress,
+    };
+  }
+  function fromDb(r) {
+    return {
+      id: r.id,
+      title: r.title,
+      description: r.description || '',
+      category: r.category,
+      startDate: r.start_date,
+      endDate: r.end_date,
+      progress: r.progress,
+    };
+  }
+
+  async function dbLoad() {
+    const res = await fetch(`${API}?select=*&order=id.asc`, { headers: HEADERS });
+    if (!res.ok) throw new Error(await res.text());
+    return (await res.json()).map(fromDb);
+  }
+
+  async function dbUpsert(task) {
+    const res = await fetch(API, {
+      method: 'POST',
+      headers: { ...HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' },
+      body: JSON.stringify(toDb(task)),
+    });
+    if (!res.ok) throw new Error(await res.text());
+  }
+
+  async function dbDelete(id) {
+    const res = await fetch(`${API}?id=eq.${id}`, { method: 'DELETE', headers: HEADERS });
+    if (!res.ok) throw new Error(await res.text());
+  }
+
+  // ===== INIT =====
+  async function init() {
+    document.getElementById('today-label').textContent = 'Өнөөдөр: ' + TODAY;
+    populateCategorySelect();
+    setSaveStatus('loading');
+    try {
+      const loaded = await dbLoad();
+      if (loaded.length === 0) {
+        // Анх удаа орж байгаа бол эхлэлийн өгөгдөл нэмнэ
+        for (const t of INITIAL_TASKS) await dbUpsert(t);
+        tasks = [...INITIAL_TASKS];
+      } else {
+        tasks = loaded;
+      }
+      setSaveStatus('saved');
+    } catch(e) {
+      console.error(e);
+      setSaveStatus('error');
+      showToast('Сүлжээний алдаа!', 'err');
+    }
+    renderNav();
+    renderContent();
+  }
+
+  // ===== SAVE STATUS =====
+  function setSaveStatus(state) {
+    const dot   = document.getElementById('save-dot');
+    const label = document.getElementById('save-label');
+    if (!dot) return;
+    dot.className = 'save-dot';
+    if (state === 'loading') { dot.classList.add('saving'); label.textContent = 'Уншиж байна...'; }
+    else if (state === 'saving') { dot.classList.add('saving'); label.textContent = 'Хадгалж байна...'; }
+    else if (state === 'saved')  { label.textContent = 'Хадгалагдсан ✓'; }
+    else if (state === 'error')  { dot.classList.add('error'); label.textContent = 'Алдаа!'; }
+  }
+
+  // ===== NAV =====
+  function renderNav() {
+    const nav = document.getElementById('nav-list');
+    nav.innerHTML = '';
+    CATEGORIES.forEach(cat => {
+      const count = getCount(cat.id);
+      const isActive = activeTab === cat.id;
+      const isLocked   = cat.locked && !isWordpressUnlocked;
+      const isUnlocked = cat.locked && isWordpressUnlocked;
+      const btn = document.createElement('button');
+      btn.className = 'nav-item' + (isActive ? ' active' : '');
+      btn.innerHTML = `
+        <span class="nav-icon">${cat.icon}</span>
+        ${cat.name}
+        ${count > 0 ? `<span class="nav-badge">${count}</span>` : ''}
+        ${isLocked   ? `<svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>` : ''}
+        ${isUnlocked ? `<svg class="lock-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--accent);opacity:0.9"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>` : ''}
+      `;
+      btn.onclick = () => handleTabClick(cat.id);
+      nav.appendChild(btn);
+    });
+  }
+
+  function getCount(catId) {
+    if (catId === 'dashboard') return tasks.filter(t => t.progress < 100 && t.category !== 'wordpress').length;
+    if (catId === 'completed') return tasks.filter(t => t.progress === 100).length;
+    return tasks.filter(t => t.category === catId && t.progress < 100).length;
+  }
+
+  function handleTabClick(catId) {
+    if (catId === 'wordpress' && !isWordpressUnlocked) { pendingTab = catId; openPinModal(); return; }
+    if (catId !== 'wordpress' && isWordpressUnlocked) isWordpressUnlocked = false;
+    activeTab = catId;
+    renderNav();
+    renderContent();
+  }
+
+  // ===== CONTENT =====
+  function renderContent() {
+    const cat = CATEGORIES.find(c => c.id === activeTab);
+    const sub = activeTab === 'dashboard' ? ' — Яаралтай ажлууд' : '';
+    document.getElementById('topbar-title').innerHTML = `${cat.name}<span class="sub">${sub}</span>`;
+    const grid = document.getElementById('task-grid');
+    const list = getFilteredSorted();
+    if (list.length === 0) {
+      grid.innerHTML = `<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><h3>Ажил олдсонгүй</h3><p>${activeTab === 'completed' ? 'Одоогоор дууссан ажил байхгүй.' : 'Энэ хэсэгт хийх ажил байхгүй.'}</p></div>`;
+      return;
+    }
+    grid.innerHTML = list.map(renderTaskCard).join('');
+  }
+
+  function getFilteredSorted() {
+    let f = tasks;
+    if (activeTab === 'dashboard') f = tasks.filter(t => t.progress < 100 && t.category !== 'wordpress');
+    else if (activeTab === 'completed') f = tasks.filter(t => t.progress === 100);
+    else f = tasks.filter(t => t.category === activeTab && t.progress < 100);
+    return f.sort((a, b) => {
+      const ra = urgencyRank(a), rb = urgencyRank(b);
+      return ra !== rb ? ra - rb : new Date(a.endDate) - new Date(b.endDate);
+    });
+  }
+
+  function urgencyRank(t) {
+    if (t.progress === 100) return 4;
+    const d = daysLeft(t.endDate);
+    if (d <= 1) return 1; if (d <= 3) return 2; return 3;
+  }
+  function daysLeft(endDate) {
+    const e = new Date(endDate), t = new Date(TODAY);
+    e.setHours(0,0,0,0); t.setHours(0,0,0,0);
+    return Math.ceil((e - t) / 86400000);
+  }
+  function urgencyInfo(task) {
+    if (task.progress === 100) return { cls: 'done', label: 'Дууссан' };
+    const d = daysLeft(task.endDate);
+    if (d <= 1) return { cls: 'urgent', label: 'Яаралтай' };
+    if (d <= 3) return { cls: 'soon',   label: 'Удахгүй' };
+    return { cls: 'normal', label: 'Хэвийн' };
+  }
+
+  function renderTaskCard(task) {
+    const u = urgencyInfo(task);
+    const catName = CATEGORIES.find(c => c.id === task.category)?.name || '';
+    const fill = task.progress === 100 ? 'background:var(--green)' : '';
+    return `
+      <div class="task-card ${u.cls}" id="card-${task.id}">
+        <div class="task-actions">
+          <button class="icon-btn edit" onclick="openEditModal(${task.id})" title="Засах"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+          <button class="icon-btn del" onclick="deleteTask(${task.id})" title="Устгах"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>
+        </div>
+        <div class="task-body">
+          <div style="flex:1;min-width:0">
+            <div class="task-meta"><span class="badge ${u.cls}">${u.label}</span><span class="badge cat">${catName}</span></div>
+            <div class="task-title">${escHtml(task.title)}</div>
+            ${task.description ? `<div class="task-desc">${escHtml(task.description)}</div>` : ''}
+            <div class="task-dates">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Эхлэх: <strong style="color:var(--text-dim)">${task.startDate}</strong></span>
+              <span class="end"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Дуусах: <strong>${task.endDate}</strong></span>
+            </div>
+          </div>
+          <div class="task-progress-area">
+            <div class="progress-label"><span>Явц</span><span id="prog-label-${task.id}">${task.progress}%</span></div>
+            <div class="progress-track"><div class="progress-fill" id="prog-fill-${task.id}" style="width:${task.progress}%;${fill}"></div></div>
+            <input type="range" min="0" max="100" step="10" value="${task.progress}" oninput="updateProgress(${task.id}, this.value)">
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // ===== PROGRESS =====
+  let progressTimer = {};
+  function updateProgress(id, val) {
+    const v = parseInt(val);
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    task.progress = v;
+    const fill  = document.getElementById('prog-fill-' + id);
+    const label = document.getElementById('prog-label-' + id);
+    const card  = document.getElementById('card-' + id);
+    if (fill)  { fill.style.width = v + '%'; fill.style.background = v === 100 ? 'var(--green)' : 'var(--accent)'; }
+    if (label) label.textContent = v + '%';
+    if (card)  card.className = 'task-card ' + urgencyInfo(task).cls;
+    renderNav();
+    // Debounce save
+    clearTimeout(progressTimer[id]);
+    setSaveStatus('saving');
+    progressTimer[id] = setTimeout(async () => {
+      try { await dbUpsert(task); setSaveStatus('saved'); } catch(e) { setSaveStatus('error'); }
+    }, 600);
+  }
+
+  // ===== DELETE =====
+  async function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    renderNav(); renderContent();
+    try {
+      setSaveStatus('saving');
+      await dbDelete(id);
+      setSaveStatus('saved');
+      showToast('Ажил устгагдлаа');
+    } catch(e) { setSaveStatus('error'); showToast('Устгахад алдаа гарлаа', 'err'); }
+  }
+
+  // ===== MODAL =====
+  function populateCategorySelect() {
+    document.getElementById('f-category').innerHTML = CATEGORIES
+      .filter(c => c.id !== 'dashboard' && c.id !== 'completed')
+      .map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  }
+
+  function openNewModal() {
+    editingId = null;
+    document.getElementById('modal-title').textContent = 'Шинэ ажил үүсгэх';
+    document.getElementById('f-title').value = '';
+    document.getElementById('f-desc').value = '';
+    document.getElementById('f-category').value = 'ubxd';
+    document.getElementById('f-start').value = TODAY;
+    document.getElementById('f-end').value = TODAY;
+    document.getElementById('f-progress').value = 0;
+    document.getElementById('f-prog-label').textContent = '0%';
+    document.getElementById('task-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('f-title').focus(), 100);
+  }
+
+  function openEditModal(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    editingId = id;
+    document.getElementById('modal-title').textContent = 'Ажил засварлах';
+    document.getElementById('f-title').value = task.title;
+    document.getElementById('f-desc').value = task.description || '';
+    document.getElementById('f-category').value = task.category;
+    document.getElementById('f-start').value = task.startDate;
+    document.getElementById('f-end').value = task.endDate;
+    document.getElementById('f-progress').value = task.progress;
+    document.getElementById('f-prog-label').textContent = task.progress + '%';
+    document.getElementById('task-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('f-title').focus(), 100);
+  }
+
+  function closeModal() { document.getElementById('task-modal').style.display = 'none'; editingId = null; }
+  function onOverlayClick(e) { if (e.target === document.getElementById('task-modal')) closeModal(); }
+
+  async function handleSave() {
+    const title = document.getElementById('f-title').value.trim();
+    if (!title) { document.getElementById('f-title').focus(); return; }
+    const taskData = {
+      id: editingId || Date.now(),
+      title,
+      description: document.getElementById('f-desc').value.trim(),
+      category: document.getElementById('f-category').value,
+      startDate: document.getElementById('f-start').value,
+      endDate: document.getElementById('f-end').value,
+      progress: parseInt(document.getElementById('f-progress').value),
+    };
+    if (editingId) {
+      tasks = tasks.map(t => t.id === editingId ? taskData : t);
+    } else {
+      tasks.push(taskData);
+    }
+    closeModal(); renderNav(); renderContent();
+    try {
+      setSaveStatus('saving');
+      await dbUpsert(taskData);
+      setSaveStatus('saved');
+      showToast(editingId ? 'Ажил шинэчлэгдлээ' : 'Шинэ ажил нэмэгдлээ');
+    } catch(e) { setSaveStatus('error'); showToast('Хадгалахад алдаа гарлаа', 'err'); }
+  }
+
+  // ===== PIN =====
+  function openPinModal() {
+    document.getElementById('pin-input').value = '';
+    document.getElementById('pin-input').className = 'pin-input';
+    document.getElementById('pin-error').style.display = 'none';
+    document.getElementById('pin-modal').style.display = 'flex';
+    setTimeout(() => document.getElementById('pin-input').focus(), 100);
+  }
+  function closePinModal() { document.getElementById('pin-modal').style.display = 'none'; }
+  function checkPin() {
+    const val = document.getElementById('pin-input').value;
+    if (val === '@12@') {
+      isWordpressUnlocked = true; closePinModal();
+      activeTab = pendingTab; renderNav(); renderContent();
+    } else {
+      document.getElementById('pin-input').className = 'pin-input error';
+      document.getElementById('pin-error').style.display = 'block';
+      document.getElementById('pin-input').value = '';
+      document.getElementById('pin-input').focus();
+    }
+  }
+
+  // ===== TOAST =====
+  let toastTimer;
+  function showToast(msg, type = 'success') {
+    clearTimeout(toastTimer);
+    let t = document.querySelector('.toast');
+    if (t) t.remove();
+    t = document.createElement('div');
+    t.className = `toast ${type}`;
+    t.textContent = msg;
+    document.body.appendChild(t);
+    toastTimer = setTimeout(() => t && t.remove(), 2500);
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      if (document.getElementById('pin-modal').style.display !== 'none') { closePinModal(); return; }
+      if (document.getElementById('task-modal').style.display !== 'none') { closeModal(); return; }
+    }
+  });
+
+  // PWA Service Worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+
+  init();
+</script>
+</body>
+</html>
