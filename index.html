@@ -462,6 +462,7 @@
     const nav = document.getElementById('nav-list');
     nav.innerHTML = '';
     CATEGORIES.forEach(cat => {
+      if (cat.hidden) return;
       const count = getCount(cat.id);
       const isActive = activeTab === cat.id;
       const isLocked   = cat.locked && !isWordpressUnlocked;
