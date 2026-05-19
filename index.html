@@ -240,7 +240,12 @@
 
     /* MOBILE */
     @media (max-width: 700px) {
-      #sidebar { display: none; }
+      #sidebar { display: flex; width: 100%; height: auto; flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid var(--border); }
+      #sidebar .sidebar-logo { display: none; }
+      #sidebar .sidebar-bottom { display: none; }
+      #sidebar .sidebar-nav { display: flex; flex-direction: row; padding: 6px; overflow-x: auto; }
+      #sidebar .nav-item { flex-shrink: 0; padding: 7px 12px; font-size: 12px; }
+      #app { flex-direction: column; }
       .topbar { padding: 0 16px; }
       #content { padding: 16px; }
       .task-body { flex-direction: column; }
